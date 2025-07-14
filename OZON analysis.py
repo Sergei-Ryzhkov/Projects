@@ -2,7 +2,7 @@
 #                                   Preliminaries                                        #
 # ---------------------------------------------------------------------------------------#
 
-# Download necessary libraries
+# Download libraries
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -13,23 +13,23 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 
-# Connects to the database
+# Connect to Google Sheets using service account credentials 
 gc = gspread.service_account(filename=r'C:\Users\first-scarab (key).json')
 
 
-# Extracts financial statements, operating results and other information
+# Access OZON financial datasets 
 ozon_financial_statements = gc.open('OZON - отчетность')
 ozon_operating_results = gc.open('OZON - показатели деятельности')
 ozon_financial_ratios = gc.open('OZON - финансовые коэффициенты')
 
-# Assigns sheets to variables
-balanceq_sheet = ozon_financial_statements.get_worksheet(1)
-plq_sheet = ozon_financial_statements.get_worksheet(3)
-cfq_sheet = ozon_financial_statements.get_worksheet(5)
-orq_sheet = ozon_operating_results.get_worksheet(1)
-fr_sheet = ozon_financial_ratios.get_worksheet(1)
+# Assign specific worksheets to variabless
+balanceq_sheet = ozon_financial_statements.get_worksheet(1) # Balance Sheet
+plq_sheet = ozon_financial_statements.get_worksheet(3)      # Profit & Loss
+cfq_sheet = ozon_financial_statements.get_worksheet(5)      # Cash Flow 
+orq_sheet = ozon_operating_results.get_worksheet(1)         # Operating Results 
+fr_sheet = ozon_financial_ratios.get_worksheet(1)           # Financial Ratios
 
-# Converts sheets to dataframes
+# Convert sheets to Pandas DataFRames
 ozon_blq = pd.DataFrame(balanceq_sheet.get('B3:ZZ45'))
 ozon_plq = pd.DataFrame(plq_sheet.get('B3:ZZ26'))
 ozon_cfq = pd.DataFrame(cfq_sheet.get('B3:ZZ53'))
@@ -39,7 +39,7 @@ revenue_structure = pd.DataFrame(orq_sheet.get('B21:ZZ29'))
 cost_structure = pd.DataFrame(orq_sheet.get('B35:ZZ42'))
 ozon_fr = pd.DataFrame(fr_sheet.get('B3:ZZ42'))
 
-# Convinence option
+# Display settings
 pd.set_option('display.precision', 2)
 
 # ---------------------------------------------------------------------------------------#
@@ -47,18 +47,18 @@ pd.set_option('display.precision', 2)
 # ---------------------------------------------------------------------------------------#
 
 
-ozon_blq.dropna(inplace=True) # Removes missing values
-ozon_blq.reset_index(drop=True, inplace=True) # Resets index so there is no gaps
-ozon_blq.iloc[1:, 1:] = ozon_blq.iloc[1:, 1:].apply(pd.to_numeric) # Converts strings to numeric
-ozon_blq.iloc[1:, 1:] = ozon_blq.iloc[1:, 1:] / 1000000 # Makes it display values in billions instead of thousands.
-ozon_blq.iloc[0, 1:] = pd.to_datetime(ozon_blq.iloc[0, 1:], format='%d.%m.%Y').dt.strftime('%d-%m-%Y') #Changes dates format
+ozon_blq.dropna(inplace=True) # Remove missing values
+ozon_blq.reset_index(drop=True, inplace=True) # Reset index to remove gaps
+ozon_blq.iloc[1:, 1:] = ozon_blq.iloc[1:, 1:].apply(pd.to_numeric) # Convert string values to numeric
+ozon_blq.iloc[1:, 1:] = ozon_blq.iloc[1:, 1:] / 1000000 # Scale values to billions (divide by 1M)
+ozon_blq.iloc[0, 1:] = pd.to_datetime(ozon_blq.iloc[0, 1:], format='%d.%m.%Y').dt.strftime('%d-%m-%Y') # Convert date format to DD-MM-YYYY
 
 
 ozon_plq.dropna(inplace=True)
 ozon_plq.reset_index(drop=True, inplace=True)
 ozon_plq.iloc[1:, 1:] = ozon_plq.iloc[1:, 1:].apply(pd.to_numeric)
 ozon_plq.iloc[1:, 1:] = ozon_plq.iloc[1:, 1:] / 1000000 
-ozon_plq.iloc[0, 1:] = ozon_plq.iloc[0, 1:].str.slice_replace(1, 5, 'q') # Makes dates look like "1q 2024"
+ozon_plq.iloc[0, 1:] = ozon_plq.iloc[0, 1:].str.slice_replace(1, 5, 'q') # Format dates as quarters
 ozon_plq.iloc[0, 1:] = ozon_plq.iloc[0, 1:].str.slice_replace(-2)
 
 
@@ -72,22 +72,22 @@ ozon_cfq.iloc[0, 1:3] = ozon_cfq.iloc[0, 1:3].str.slice_replace(1, 6, 'm')
 ozon_cfq.iloc[0, 1:3] = ozon_cfq.iloc[0, 1:3].str.slice_replace(-2)
 
 
-market_place.iloc[1:, 0] = market_place.iloc[1:, 0].map(str) + ', ' + market_place.iloc[1:, 1].map(str) # Joins two columns together
+market_place.iloc[1:, 0] = market_place.iloc[1:, 0].map(str) + ', ' + market_place.iloc[1:, 1].map(str) # Join two text columns into one
 market_place.drop(columns=1, inplace=True)
 market_place.iloc[0, 0] = 'Metric'
 market_place.columns = range(market_place.shape[1])
 market_place.iloc[1:, 2:] = market_place.iloc[1:, 2:].apply(pd.to_numeric)
 market_place.iloc[0, 2:] = market_place.iloc[0, 2:].str.slice_replace(1, 5, 'q')
 market_place.iloc[0, 2:] = market_place.iloc[0, 2:].str.slice_replace(-2)
-market_place.fillna(0, inplace=True) # Fills n/a with zeros
+market_place.fillna(0, inplace=True) # Fill NA values with zeros
 
 
 metrics.iloc[1:, 0] = metrics.iloc[1:, 0].map(str) + ', ' + metrics.iloc[1:, 1].map(str)
 metrics.drop(metrics.columns[1:5], inplace=True, axis=1)
 metrics.columns = range(metrics.shape[1])
-metrics.ffill(inplace=True, axis=1) # First, fills n/a with following values
+metrics.ffill(inplace=True, axis=1) # Forward fill NA values
 metrics.iloc[1:, 1:] = metrics.iloc[1:, 1:].replace(r'^\s*$', np.nan, regex=True)
-metrics.bfill(inplace=True, axis=1) # Then fills the rest with preceding 
+metrics.bfill(inplace=True, axis=1) # Backward fill remaining NA values
 metrics.iloc[1:, 1:] = metrics.iloc[1:, 1:].apply(pd.to_numeric)
 metrics.iloc[0, 1:] = metrics.iloc[0, 1:].str.slice_replace(1, 5, 'q')
 metrics.iloc[0, 1:] = metrics.iloc[0, 1:].str.slice_replace(-2)
@@ -108,7 +108,7 @@ cost_structure.drop(cost_structure.columns[1:4], axis=1, inplace=True)
 cost_structure.columns = range(cost_structure.shape[1])
 cost_structure.iloc[0, 1:] = cost_structure.iloc[0, 1:].str.slice_replace(1, 5, 'q')
 cost_structure.iloc[0, 1:] = cost_structure.iloc[0, 1:].str.slice_replace(-2)
-cost_structure.iloc[1:, 1:] = cost_structure.iloc[1:, 1:].apply(pd.to_numeric)*-1
+cost_structure.iloc[1:, 1:] = cost_structure.iloc[1:, 1:].apply(pd.to_numeric)*-1 # Convert costs to positive values
 cost_structure.iloc[1:, 1:] = cost_structure.iloc[1:, 1:] / 1000000
                                                   
 
@@ -119,29 +119,30 @@ ozon_fr.iloc[1:, 1:] = ozon_fr.iloc[1:, 1:].apply(pd.to_numeric)
 #                                  Visualisation & Analysis                             #
 # ---------------------------------------------------------------------------------------#
 
-# Basic settings for visualisations
+# Basic settings for visualizations
 colors = ['#AFD5C1', '#E68688', '#F1D078', '#8FCCEC', '#EEAF9D', '#C4B2D6', '#A0A0A0']
 font = {'fontname': 'Impact'}
 f_colors = ['#404040', '#BFBFBF', '#D9D9D9']
 
 
-# Makes graphs interactive. By changing the 'quarters_analysed', we can control the number of quarters analyzed.
+# Control the number of quarters analyzed in each graph
 quarters_analysed = 12
-dates_q = ozon_plq.iloc[0, -quarters_analysed:]  # Quarterly dates e.g. 4q 2024
-dates_n = ozon_blq.iloc[0, -quarters_analysed:]  # Numeric dates e.g. 31.12.2024
+dates_q = ozon_plq.iloc[0, -quarters_analysed:]  # Format dates as quarterly periods (e.g., 4Q 2024)
+dates_n = ozon_blq.iloc[0, -quarters_analysed:]  # Format dates as numeric values (e.g., 31-12-2024)
 
-# Creates a barchart of Gross Merchandise Value (GMV) and displays its growth in the lineplot below
+
+# Create a bar chart of Gross Merchandise Value (GMV) with a growth line plot below
 GMV_figure, (gmv, gmvp) = plt.subplots(2, 1, figsize=(9, 6), height_ratios=(1.5, 1))
 bars = gmv.bar(dates_q, market_place.iloc[1, -quarters_analysed:], color=f_colors[2], width=0.4)
-for i in [-1, -5]:                    # Highlights the last quarter and its year-ago equivalent by changing their colors
+for i in [-1, -5]:                    # Highlight the last quarter and its year-ago equivalent by changing their colors
     bars[i].set_color(colors[3])
 gmv.set_ylim(market_place.iloc[1, -quarters_analysed:].min() * 0.9, market_place.iloc[1, -quarters_analysed:].max() * 1.1)
 plt.subplots_adjust(hspace=0.4)
-gmv.xaxis.set_tick_params(rotation=45, labelsize=8) # Changes the angle of ticks and size
+gmv.xaxis.set_tick_params(rotation=45, labelsize=8) # Rotate x-axis ticks and adjust label size
 gmv.yaxis.set_visible(False) 
 gmv.margins(x=0.01)
-gmv.xaxis.set_ticks_position('none')   # Removes ticks
-for key, spine in gmv.spines.items():  # Removes three spines, keeps the bottom one. Makes the graph clearer
+gmv.xaxis.set_ticks_position('none')   # Remove all axis ticks
+for key, spine in gmv.spines.items():  # Remove three spines (keeping only the bottom spine) for cleaner visualization
     if key != 'bottom':
         spine.set_visible(False)
 gmv.spines['bottom'].set_color(f_colors[0])
@@ -164,10 +165,10 @@ for i in range(len(dates_q)):
               str(round(market_place.iloc[3, -quarters_analysed + i])), ha='center', fontsize=8)
 GMV_figure.text(0.12, 0.35, 'GMV Growth', fontsize=16, color=f_colors[0], **font)
 GMV_figure.text(0.12, 0.31, 'YoY, %', fontsize=16, color=f_colors[1], **font)
-gmvp.axhline(y=market_place.iloc[3, -quarters_analysed:].mean(), color=colors[1], linestyle="dotted") # Creates a horizontal line at the mean
+gmvp.axhline(y=market_place.iloc[3, -quarters_analysed:].mean(), color=colors[1], linestyle="dotted") # Add a horizontal line at the mean value
 plt.show()
 
-# Market Place Share
+# Create a client base graph
 Market_share_figure, msv = plt.subplots(figsize=(9, 6))
 msv.plot(dates_q, market_place.iloc[2, -quarters_analysed:], color=colors[3], alpha=0.5)
 msv.xaxis.set_tick_params(rotation=45, labelsize=10)
@@ -185,7 +186,7 @@ Market_share_figure.text(0.12, 0.88, 'Market Place Share', fontsize=16, color=f_
 Market_share_figure.text(0.12, 0.842, 'Percent, %', fontsize=16, color=f_colors[1], **font)
 plt.show()
 
-# Operating Metrics
+# Create an order volume graph
 Metrics_figure, (cbv, avo) = plt.subplots(2, 1, figsize=(9, 6))
 cbv.bar(dates_q, metrics.iloc[2, -quarters_analysed:], color=colors[3], width=0.4)
 cbv.xaxis.set_tick_params(rotation=45, labelsize=8)
@@ -218,7 +219,7 @@ for i in range(len(dates_q)):
 plt.subplots_adjust(hspace=0.3)
 plt.show()
 
-# Orders 
+# Create a market place share graph
 Orders_figure, onv = plt.subplots(figsize=(9, 6))
 bars = onv.bar(dates_q, metrics.iloc[1, -quarters_analysed:], width=0.4, color=f_colors[2])
 for i in [-1,-5]:
@@ -237,7 +238,7 @@ Orders_figure.text(0.12, 0.88, 'Number of Orders', fontsize=18, color=f_colors[0
 Orders_figure.text(0.12, 0.84, 'mln', fontsize=18, color=f_colors[1], **font)
 plt.show()
 
-# Revenue
+# Create a revenue graph
 Revenue_figure, (rvv,rvg) = plt.subplots(2,1, figsize=(9, 6), height_ratios=(1.5, 1))
 bars = rvv.bar(dates_q, ozon_plq.iloc[1, -quarters_analysed:], width=0.4, color=f_colors[2])
 for i in [-1, -5]:
@@ -274,7 +275,7 @@ for key, spine in rvg.spines.items():
 rvg.axhline(y=revenue_growth.mean(), color=colors[1], alpha=0.8, linestyle='dotted')
 plt.show()
 
-# Revenue structure
+# Create a revenue structure graph
 labels = ['1P Sales', 'MP Commissions', 'Advertising', 'Delivery', 'Travel Commissions', 'Banking', 'Other', 'Interest Income']
 ozon_colors = ['#D9D9D9', '#9DC3E6', '#FFE699', '#F4B183', '#E68688','#C4B2D6', '#7A7A7A', "#926EB6"]
 
@@ -300,7 +301,7 @@ for i in range(revenue_structure.iloc[1:, -quarters_analysed:].shape[0]):
                      str(round(revenue_structure.iloc[1 + i, -quarters_analysed + j], 1)), ha='center', fontsize=12)
 plt.show()
 
-#Rev percentage structure 
+# Create a revenue pct graph
 revenue_pct = round((revenue_structure.iloc[1:, -quarters_analysed:] / revenue_structure.iloc[1:, -quarters_analysed:].sum() * 100).astype(float), 2)
 dates_line = pd.Series(range(quarters_analysed))
 
@@ -321,7 +322,33 @@ pcf.set_yticks(dates_line, dates_q, fontsize=12)
 pcf.legend(loc='lower center', bbox_to_anchor=(0.5, -0.15), ncol=8, fontsize=11)
 plt.show()
 
-#Operating income 
+
+# Create an expenses plot
+ozon_colors_exp = ['#9DC3E6', '#F4B183', '#FFE699', '#C4B2D6', '#D9D9D9', '#E68688']
+exp_str = -ozon_plq.iloc[6:11,-quarters_analysed:]
+labels_exp=['COGS', 'Delivery', 'Marketing', 'IT', 'G&A']
+width_r=0.35
+
+Expenses_figure, expv = plt.subplots(figsize=(9, 6))
+expv.set_title('Expenses Breakdown, bn rubles', fontsize=20, **font, color=f_colors[0], alpha=0.95)
+for i in range(len(exp_str)):
+    expv.bar(dates_q, exp_str.iloc[i, -quarters_analysed:], color=ozon_colors_exp[i],
+             bottom=exp_str.iloc[:i, -quarters_analysed:].sum(), label=labels_exp[i], width=0.8)
+expv.xaxis.set_tick_params(rotation=45, labelsize=9)
+expv.margins(x=0.01)
+expv.set_ylim(0, exp_str.iloc[:, -quarters_analysed:].sum().max() * 1.1)
+expv.legend(loc='lower center', bbox_to_anchor=(0.5, -0.22), ncol=len(exp_str))
+for i in range(exp_str.shape[0]):
+    for j in range(exp_str.shape[1]):
+        if exp_str.iloc[i, j] > 6:
+            expv.text(dates_q.iloc[j], exp_str.iloc[:i, j].sum() + exp_str.iloc[i, j] * 0.4,
+                      str(round(exp_str.iloc[i, -quarters_analysed + j], 1)), ha='center')
+for key, spine in expv.spines.items():
+    if key != 'bottom':
+        spine.set_visible(False)
+expv.yaxis.set_visible(False)
+
+# Create an operating income graph 
 operating_maring = round((ozon_plq.iloc[11, -quarters_analysed:] / ozon_plq.iloc[1, -quarters_analysed:] * 100).astype(float), 1)
 
 Oper_inc_figure, (opv, opm) = plt.subplots(2, 1, figsize=(8, 6), height_ratios=(1.5, 1))
@@ -352,7 +379,7 @@ for i in range(len(dates_q)):
 opm.margins(x=0.03)
 plt.show()
 
-#EBITDA
+# Create an EBITDA graph
 EBITDA_margin = round((ozon_plq.iloc[-1, -quarters_analysed:] / ozon_plq.iloc[1, -quarters_analysed:] * 100).astype(float), 2)
 
 EBITDA_figure, (ebv, ebm) = plt.subplots(2, 1, figsize=(9,6), height_ratios=(1.5, 1))
@@ -381,62 +408,7 @@ for i in range(len(dates_q)):
              ha='center', fontsize=8)
 
 
-#Expenses Breakdown
-ozon_colors_exp = ['#9DC3E6', '#F4B183', '#FFE699', '#C4B2D6', '#D9D9D9', '#E68688']
-exp_str = -ozon_plq.iloc[6:11,-quarters_analysed:]
-labels_exp=['COGS', 'Delivery', 'Marketing', 'IT', 'G&A']
-width_r=0.35
-
-Expenses_figure, expv = plt.subplots(figsize=(9, 6))
-expv.set_title('Expenses Breakdown, bn rubles', fontsize=20, **font, color=f_colors[0], alpha=0.95)
-for i in range(len(exp_str)):
-    expv.bar(dates_q, exp_str.iloc[i, -quarters_analysed:], color=ozon_colors_exp[i],
-             bottom=exp_str.iloc[:i, -quarters_analysed:].sum(), label=labels_exp[i], width=0.8)
-expv.xaxis.set_tick_params(rotation=45, labelsize=9)
-expv.margins(x=0.01)
-expv.set_ylim(0, exp_str.iloc[:, -quarters_analysed:].sum().max() * 1.1)
-expv.legend(loc='lower center', bbox_to_anchor=(0.5, -0.22), ncol=len(exp_str))
-for i in range(exp_str.shape[0]):
-    for j in range(exp_str.shape[1]):
-        if exp_str.iloc[i, j] > 6:
-            expv.text(dates_q.iloc[j], exp_str.iloc[:i, j].sum() + exp_str.iloc[i, j] * 0.4,
-                      str(round(exp_str.iloc[i, -quarters_analysed + j], 1)), ha='center')
-for key, spine in expv.spines.items():
-    if key != 'bottom':
-        spine.set_visible(False)
-expv.yaxis.set_visible(False)
-
-
-#Profits
-net_margin = round((ozon_plq.iloc[19, -quarters_analysed:] / ozon_plq.iloc[1, -quarters_analysed:] * 100).astype(float), 2)
-
-Profits_figure, (pfv, pfm) = plt.subplots(2,1, figsize=(9, 6), height_ratios=(1.5, 1))
-bars = pfv.bar(dates_q, ozon_plq.iloc[19, -quarters_analysed:], width=0.5, color=f_colors[2])
-for i in [-1, -5]:
-    bars[i].set_color(colors[3])
-pfv.xaxis.set_tick_params(rotation=45, labelsize=8)
-pfv.set_title('Net Income, bn rubles', fontsize=20, **font, color=f_colors[0])
-pfv.axhline(y=0, linewidth=0.4, color=f_colors[0])
-pfv.margins(x=0.01)
-pfv.set_ylim(ozon_plq.iloc[19, -quarters_analysed:].min() * 1.1, ozon_plq.iloc[19, -quarters_analysed:].max() * 1.5)
-pfv.yaxis.set_visible(False)
-for i in range(len(ozon_plq.iloc[19, -quarters_analysed:])):
-    pfv.text(dates_q.iloc[i], ozon_plq.iloc[19, -quarters_analysed + i] * 0.5, 
-             str(round(ozon_plq.iloc[19, -quarters_analysed + i], 1)), ha='center', fontsize=8)
-plt.subplots_adjust(hspace=0.5)
-pfm.plot(dates_q, net_margin, color=colors[3], linewidth=0.8)
-pfm.set_title('Net Margin, %', fontsize=16, **font, color=f_colors[0])
-pfm.yaxis.set_visible(False)
-pfm.xaxis.set_tick_params(rotation=45, labelsize=8)
-pfm.margins(x=0.02)
-pfm.set_ylim(net_margin.min() * 1.1, net_margin.max() * 2)
-pfm.axhline(y=0, color=f_colors[0], linewidth=0.6, ls='--')
-for i in range(len(net_margin)):
-    pfm.text(dates_q.iloc[i], net_margin.iloc[i] + net_margin.max() * 0.01, 
-             str(round(net_margin.iloc[i], 1)), ha='center', fontsize=8)
-
-
-#CASH, DEBT, Interest
+# Create a debt graph 
 debt_cash = ozon_fr.iloc[[7,13], -quarters_analysed:] /1000000
 width_debt = 0.35
 labels_debt = ['Cash', 'Debt']
@@ -476,16 +448,44 @@ fre.plot(dates_q, Net_Debt_Ebitda, color=colors[3], linewidth=0.6)
 fre.set_ylim(Net_Debt_Ebitda.min() * 1.2, Net_Debt_Ebitda.max() * 1.2)
 for i in range(len(Net_Debt_Ebitda)):
     fre.text(dates_q.iloc[i], Net_Debt_Ebitda.iloc[i], str(round(Net_Debt_Ebitda.iloc[i], 1)),
-             ha='center', fontsize=8)
+             ha='center', fontsize=8)    
 
 
-#Cashlows 
+# Create a profit graph
+net_margin = round((ozon_plq.iloc[19, -quarters_analysed:] / ozon_plq.iloc[1, -quarters_analysed:] * 100).astype(float), 2)
+
+Profits_figure, (pfv, pfm) = plt.subplots(2,1, figsize=(9, 6), height_ratios=(1.5, 1))
+bars = pfv.bar(dates_q, ozon_plq.iloc[19, -quarters_analysed:], width=0.5, color=f_colors[2])
+for i in [-1, -5]:
+    bars[i].set_color(colors[3])
+pfv.xaxis.set_tick_params(rotation=45, labelsize=8)
+pfv.set_title('Net Income, bn rubles', fontsize=20, **font, color=f_colors[0])
+pfv.axhline(y=0, linewidth=0.4, color=f_colors[0])
+pfv.margins(x=0.01)
+pfv.set_ylim(ozon_plq.iloc[19, -quarters_analysed:].min() * 1.1, ozon_plq.iloc[19, -quarters_analysed:].max() * 1.5)
+pfv.yaxis.set_visible(False)
+for i in range(len(ozon_plq.iloc[19, -quarters_analysed:])):
+    pfv.text(dates_q.iloc[i], ozon_plq.iloc[19, -quarters_analysed + i] * 0.5, 
+             str(round(ozon_plq.iloc[19, -quarters_analysed + i], 1)), ha='center', fontsize=8)
+plt.subplots_adjust(hspace=0.5)
+pfm.plot(dates_q, net_margin, color=colors[3], linewidth=0.8)
+pfm.set_title('Net Margin, %', fontsize=16, **font, color=f_colors[0])
+pfm.yaxis.set_visible(False)
+pfm.xaxis.set_tick_params(rotation=45, labelsize=8)
+pfm.margins(x=0.02)
+pfm.set_ylim(net_margin.min() * 1.1, net_margin.max() * 2)
+pfm.axhline(y=0, color=f_colors[0], linewidth=0.6, ls='--')
+for i in range(len(net_margin)):
+    pfm.text(dates_q.iloc[i], net_margin.iloc[i] + net_margin.max() * 0.01, 
+             str(round(net_margin.iloc[i], 1)), ha='center', fontsize=8)
+
+
+# Create a cashflow graph
 cf_labels = ['OCF', 'CAPEX', 'FCF']
 cash_flows = pd.DataFrame([ozon_cfq.iloc[20, -quarters_analysed:], ozon_cfq.iloc[42, -quarters_analysed:], (ozon_cfq.iloc[20, -quarters_analysed:] + ozon_cfq.iloc[42, -quarters_analysed:])], index=cf_labels)
 cf_colors = ['#8FCCEC', '#D9D9D9','#F1D078']
 cf_width = 0.25
 
-# Create a cashflow graph
 CF_figure, cfv = plt.subplots(figsize=(10, 6))
 for i in range(cash_flows.shape[0]):
     cfv.bar(dates_line + cf_width * i, cash_flows.iloc[i, :], color=ozon_colors[i], width=cf_width, label=cf_labels[i])
@@ -511,11 +511,11 @@ plt.show()
 #                                  Predictions                                           #
 # ---------------------------------------------------------------------------------------#
 
-# Forecasts revenue using time series 
+# Forecast revenue using time series  
 model = LinearRegression()
 revenue = ozon_plq.iloc[1, -quarters_analysed:].reset_index(drop=True)
 dates = pd.to_datetime(dates_n, format='%d-%m-%Y').reset_index(drop=True)
-days_since_start = (dates - dates.min()).dt.days # Converts dates to days since the earliest day for preditions 
+days_since_start = (dates - dates.min()).dt.days # Display dates as the number of days since the earliest day for preditions  
 model.fit(days_since_start.values.reshape(-1, 1), revenue)
 
 last_date = dates.max() + pd.DateOffset(years=5)
@@ -534,7 +534,7 @@ deviations = model.predict(all_days_since_start.iloc[:-20].values.reshape(-1, 1)
 mae = mean_absolute_error(revenue, pd.Series(deviations))
 
 
-# Visualise predictions 
+# Visualize predictions 
 Pred_fig, prv = plt.subplots(figsize=(14, 6))
 prv.scatter(all_dates_q, future_revenue , color=colors[3], label='Actual Sales')
 prv.plot(all_dates_q, future_revenue, color=f_colors[1], label='Regression Line')
@@ -562,7 +562,7 @@ Pred_fig.text(0.12, 0.9, 'Revenue, bn rubles', fontsize=20, **font, color=f_colo
 tax_rate = 0.2
 wacc = 0.20 
 capex_coef = -0.08
-ebitda_coef = np.linspace(EBITDA_margin.iloc[-1] / 100, 20 / 100, 20) # Assumes the margin will grow from 15% to 20%
+ebitda_coef = np.linspace(EBITDA_margin.iloc[-1] / 100, 20 / 100, 20) # Assume the EBITDA margin will grow from 15% to 20%
 NWC_coef = -0.01
 terminal_growth = 0.05
 
@@ -586,7 +586,7 @@ net_debt = (ozon_fr.iloc[[7,8], -1].sum() - ozon_fr.iloc[13, -1]) / 1_000_000
 equity_value = enterprise_value - net_debt
 
 shares = ozon_fr.iloc[17, -1]
-fair_price = equity_value * 1_000_000_000 / shares # Calculates a fair price per share 
+fair_price = equity_value * 1_000_000_000 / shares # Calculate a fair price per share
 
 
 ebitda_multiple = 12 # Current multiple
@@ -604,7 +604,7 @@ potential_table
 
 
 
-#Sensitivity analysis 
+# Sensitivity analysis 
 EBITDA_multpl_range = np.linspace(8, 16, 7).round(1)
 EBITDA_range = np.linspace(projection['EBITDA'].iloc[-4:].sum() * 0.8, projection['EBITDA'].iloc[-4:].sum()*1.2, 7).round(1)  
   
@@ -614,7 +614,7 @@ for  ebitda in EBITDA_range:
     sensitivity_table[f"{ebitda} bn"] = (ebitda * EBITDA_multpl_range* projection['WACC'].iloc[-4:].mean() * 1_000_000_000 / shares).round().astype(int)
 
 
-#Sensitivity heatmap
+# Create a Sensitivity heatmap
 Sensitivity_figure, sng = plt.subplots(figsize=(9,6))
 sng = sns.heatmap(sensitivity_table, center=fair_price_mul, annot=True, fmt=".0f", cmap='Blues', 
                   linewidths=0.5, ax=sng, cbar=False)  
