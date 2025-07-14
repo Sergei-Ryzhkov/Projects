@@ -325,7 +325,7 @@ plt.show()
 operating_maring = round((ozon_plq.iloc[11, -quarters_analysed:] / ozon_plq.iloc[1, -quarters_analysed:] * 100).astype(float), 1)
 
 Oper_inc_figure, (opv, opm) = plt.subplots(2, 1, figsize=(8, 6), height_ratios=(1.5, 1))
-bars = opv.bar(dates_q, round(ozon_plq.iloc[11, -quarters_analysed:], 1), width=0.6, color=f_colors[2])
+bars = opv.bar(dates_q, ozon_plq.iloc[11, -quarters_analysed:], width=0.6, color=f_colors[2])
 for i in [-1, -5]:
     bars[i].set_color(colors[3])
 opv.xaxis.set_tick_params(rotation=45, labelsize=8)
@@ -485,7 +485,7 @@ cash_flows = pd.DataFrame([ozon_cfq.iloc[20, -quarters_analysed:], ozon_cfq.iloc
 cf_colors = ['#8FCCEC', '#D9D9D9','#F1D078']
 cf_width = 0.25
 
-
+# Create a cashflow graph
 CF_figure, cfv = plt.subplots(figsize=(10, 6))
 for i in range(cash_flows.shape[0]):
     cfv.bar(dates_line + cf_width * i, cash_flows.iloc[i, :], color=ozon_colors[i], width=cf_width, label=cf_labels[i])
@@ -499,13 +499,13 @@ cfv.xaxis.set_tick_params(rotation=45, labelsize=8)
 cfv.margins(x=0.01)
 cfv.yaxis.set_visible(False)
 for key, spine in cfv.spines.items():
-    if key != 'bottom':
-        spine.set_visible(False)
+    spine.set_visible(False)
 cfv.xaxis.set_ticks_position('none')
 cfv.axhline(y=0, color=f_colors[1], linewidth=0.6, ls='--')
 cfv.set_ylim(cash_flows.min().min() * 1.1, cash_flows.max().max() * 1.2)
 cfv.legend(loc='lower center', bbox_to_anchor=(0.5, -0.2), ncol=len(cf_labels), fontsize=8)
-
+cfv.axhline(y=0, color=f_colors[1], alpha=0.8, linewidth=0.6)
+plt.show()
 
 # ---------------------------------------------------------------------------------------#
 #                                  Predictions                                           #
@@ -564,7 +564,7 @@ wacc = 0.20
 capex_coef = -0.08
 ebitda_coef = np.linspace(EBITDA_margin.iloc[-1] / 100, 20 / 100, 20) # Assumes the margin will grow from 15% to 20%
 NWC_coef = -0.01
-terminal_growth = 0.04
+terminal_growth = 0.05
 
 #Projections
 projection = pd.DataFrame({'Dates':all_dates_q.iloc[-20:], 'Revenue':round(pd.to_numeric(future_revenue.iloc[-20:]), 2)})
@@ -576,21 +576,21 @@ projection['FCF'] = round(projection.iloc[:,2:].sum(axis=1) ,2)
 projection['WACC'] = round(1 / (1+wacc/4)**pd.Series(range(1, len(projection)+1) , index=projection.index), 2)
 projection['DFCF'] = round(projection['FCF'] * projection['WACC'], 2)
 
-final_fcf = projection['FCF'].iloc[-1]
+final_fcf = projection['FCF'].iloc[-4:].sum()
 terminal_value = (final_fcf * (1 + terminal_growth)) / (wacc - terminal_growth)
-pv_terminal = terminal_value * projection['WACC'].iloc[-1]
+pv_terminal = terminal_value * projection['WACC'].iloc[-4:].mean()
 
 
 enterprise_value = projection['DFCF'].sum() + pv_terminal 
-net_debt = (ozon_fr.iloc[[7,8], -1].sum() - ozon_fr.iloc[13, -1]) / 1000000
+net_debt = (ozon_fr.iloc[[7,8], -1].sum() - ozon_fr.iloc[13, -1]) / 1_000_000
 equity_value = enterprise_value - net_debt
 
 shares = ozon_fr.iloc[17, -1]
-fair_price = equity_value * 1000000000 / shares # Calculates a fair price per share 
+fair_price = equity_value * 1_000_000_000 / shares # Calculates a fair price per share 
 
 
-ebitda_multiple = 12 
-fair_price_mul = ebitda_multiple * projection['EBITDA'].iloc[-1] * 1000000000 / shares # Calculates a fair price per share using EBITDA multiple
+ebitda_multiple = 12 # Current multiple
+fair_price_mul = ebitda_multiple * projection['EBITDA'].iloc[-4:].sum() * projection['WACC'].iloc[-4:].mean() * 1_000_000_000 / shares # Calculates a fair price per share using EBITDA multiple
 
 current_price = ozon_fr.iloc[21, -1] # Current OZON's price
 
@@ -605,28 +605,28 @@ potential_table
 
 
 #Sensitivity analysis 
-EBITDA_multpl_range = np.linspace(8, 20, 7)
-EBITDA_range = np.linspace(projection['EBITDA'].iloc[-1] * 0.5, projection['EBITDA'].iloc[-1]*1.5, 7).round(1)  
+EBITDA_multpl_range = np.linspace(8, 16, 7).round(1)
+EBITDA_range = np.linspace(projection['EBITDA'].iloc[-4:].sum() * 0.8, projection['EBITDA'].iloc[-4:].sum()*1.2, 7).round(1)  
   
 sensitivity_table = pd.DataFrame(columns=[f"{e} bn" for e in EBITDA_range], index=[f"{b}x" for b in EBITDA_multpl_range])
  
 for  ebitda in EBITDA_range:
-    sensitivity_table[f"{ebitda} bn"] = (ebitda * EBITDA_multpl_range * 1_000_000_000 / shares).round().astype(int)
+    sensitivity_table[f"{ebitda} bn"] = (ebitda * EBITDA_multpl_range* projection['WACC'].iloc[-4:].mean() * 1_000_000_000 / shares).round().astype(int)
 
 
 #Sensitivity heatmap
 Sensitivity_figure, sng = plt.subplots(figsize=(9,6))
 sng = sns.heatmap(sensitivity_table, center=fair_price_mul, annot=True, fmt=".0f", cmap='Blues', 
-                  linewidths=0.5, ax=sng)  
+                  linewidths=0.5, ax=sng, cbar=False)  
 sng.tick_params(axis='x', which='both', top=True, labeltop=True, labelbottom=False)
 sng.xaxis.set_ticks_position('top')
 sng.yaxis.set_tick_params(rotation=0)
 sng.xaxis.set_label_position('top')  # Move the label to the top
 sng.set_xlabel('EBITDA', fontsize=16, labelpad=10)  
 sng.set_ylabel('Multiple', fontsize=16)
-
-
-
+plt.show()
+print(potential_table, end='\n\n')
+print(f"LTM EBITDA 2025/2030  RUB {round(ozon_plq.iloc[-1, -4:].sum(), 1)} / RUB {round(projection['EBITDA'].iloc[-4:].sum(), 1)} bn")
 
 
 
