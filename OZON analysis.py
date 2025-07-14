@@ -11,7 +11,6 @@ import numpy as np
 import gspread
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-import yfinance as yf
 
 
 # Connects to the database
@@ -52,7 +51,7 @@ ozon_blq.dropna(inplace=True) # Removes missing values
 ozon_blq.reset_index(drop=True, inplace=True) # Resets index so there is no gaps
 ozon_blq.iloc[1:, 1:] = ozon_blq.iloc[1:, 1:].apply(pd.to_numeric) # Converts strings to numeric
 ozon_blq.iloc[1:, 1:] = ozon_blq.iloc[1:, 1:] / 1000000 # Makes it display values in billions instead of thousands.
-ozon_blq.iloc[0, 1:] = pd.to_datetime(ozon_blq.iloc[0, 1:], format='%d-%m-%Y').dt.strftime('%d-%m-%Y') #Changes dates format
+ozon_blq.iloc[0, 1:] = pd.to_datetime(ozon_blq.iloc[0, 1:], format='%d.%m.%Y').dt.strftime('%d-%m-%Y') #Changes dates format
 
 
 ozon_plq.dropna(inplace=True)
@@ -113,7 +112,7 @@ cost_structure.iloc[1:, 1:] = cost_structure.iloc[1:, 1:].apply(pd.to_numeric)*-
 cost_structure.iloc[1:, 1:] = cost_structure.iloc[1:, 1:] / 1000000
                                                   
 
-ozon_fr.iloc[0, 1:] = pd.to_datetime(ozon_fr.iloc[0, 1:], format='%d-%m-%Y').dt.strftime('%d-%m-%Y')
+ozon_fr.iloc[0, 1:] = pd.to_datetime(ozon_fr.iloc[0, 1:], format='%d.%m.%Y').dt.strftime('%d-%m-%Y')
 ozon_fr.iloc[1:, 1:] = ozon_fr.iloc[1:, 1:].apply(pd.to_numeric)
 
 # ---------------------------------------------------------------------------------------#
@@ -166,7 +165,7 @@ for i in range(len(dates_q)):
 GMV_figure.text(0.12, 0.35, 'GMV Growth', fontsize=16, color=f_colors[0], **font)
 GMV_figure.text(0.12, 0.31, 'YoY, %', fontsize=16, color=f_colors[1], **font)
 gmvp.axhline(y=market_place.iloc[3, -quarters_analysed:].mean(), color=colors[1], linestyle="dotted") # Creates a horizontal line at the mean
-
+plt.show()
 
 # Market Place Share
 Market_share_figure, msv = plt.subplots(figsize=(9, 6))
@@ -184,6 +183,7 @@ msv.set_ylim(market_place.iloc[2, -quarters_analysed:].min() * 0.98, market_plac
 msv.margins(x=0.01)
 Market_share_figure.text(0.12, 0.88, 'Market Place Share', fontsize=16, color=f_colors[0], **font)
 Market_share_figure.text(0.12, 0.842, 'Percent, %', fontsize=16, color=f_colors[1], **font)
+plt.show()
 
 # Operating Metrics
 Metrics_figure, (cbv, avo) = plt.subplots(2, 1, figsize=(9, 6))
@@ -216,6 +216,7 @@ for i in range(len(dates_q)):
     avo.text(dates_q.iloc[i], metrics.iloc[4, -quarters_analysed + i] + metrics.iloc[4, -quarters_analysed:].max() * 0.02, str(round(metrics.iloc[4, -quarters_analysed + i], 1)),
              ha='center', fontsize=9, color=f_colors[0])
 plt.subplots_adjust(hspace=0.3)
+plt.show()
 
 # Orders 
 Orders_figure, onv = plt.subplots(figsize=(9, 6))
@@ -234,6 +235,7 @@ for i in range(len(dates_q)):
              str(round(metrics.iloc[1, -quarters_analysed + i], 1)), ha='center', fontsize=9, color=f_colors[0])
 Orders_figure.text(0.12, 0.88, 'Number of Orders', fontsize=18, color=f_colors[0], **font)
 Orders_figure.text(0.12, 0.84, 'mln', fontsize=18, color=f_colors[1], **font)
+plt.show()
 
 # Revenue
 Revenue_figure, (rvv,rvg) = plt.subplots(2,1, figsize=(9, 6), height_ratios=(1.5, 1))
@@ -270,7 +272,7 @@ for key, spine in rvg.spines.items():
     if key != 'bottom':
         spine.set_visible(False)
 rvg.axhline(y=revenue_growth.mean(), color=colors[1], alpha=0.8, linestyle='dotted')
-
+plt.show()
 
 # Revenue structure
 labels = ['1P Sales', 'MP Commissions', 'Advertising', 'Delivery', 'Travel Commissions', 'Banking', 'Other', 'Interest Income']
@@ -296,6 +298,7 @@ for i in range(revenue_structure.iloc[1:, -quarters_analysed:].shape[0]):
         if revenue_structure.iloc[1 + i, -quarters_analysed+j] > 4:
             rsv.text(dates_q.iloc[j], revenue_structure.iloc[1:2 + i, -quarters_analysed + j].sum() - revenue_structure.iloc[1 + i, -quarters_analysed + j] * 0.6, 
                      str(round(revenue_structure.iloc[1 + i, -quarters_analysed + j], 1)), ha='center', fontsize=12)
+plt.show()
 
 #Rev percentage structure 
 revenue_pct = round((revenue_structure.iloc[1:, -quarters_analysed:] / revenue_structure.iloc[1:, -quarters_analysed:].sum() * 100).astype(float), 2)
@@ -316,6 +319,7 @@ pcf.invert_yaxis()
 pcf.margins(x=0.01, y=0.02)
 pcf.set_yticks(dates_line, dates_q, fontsize=12)
 pcf.legend(loc='lower center', bbox_to_anchor=(0.5, -0.15), ncol=8, fontsize=11)
+plt.show()
 
 #Operating income 
 operating_maring = round((ozon_plq.iloc[11, -quarters_analysed:] / ozon_plq.iloc[1, -quarters_analysed:] * 100).astype(float), 1)
@@ -346,7 +350,7 @@ for i in range(len(dates_q)):
     opm.text(dates_q.iloc[i], operating_maring.iloc[i] + operating_maring.max() * 0.02, 
              str(round(operating_maring.iloc[i], 1)), ha='center', fontsize=8)
 opm.margins(x=0.03)
-
+plt.show()
 
 #EBITDA
 EBITDA_margin = round((ozon_plq.iloc[-1, -quarters_analysed:] / ozon_plq.iloc[1, -quarters_analysed:] * 100).astype(float), 2)
