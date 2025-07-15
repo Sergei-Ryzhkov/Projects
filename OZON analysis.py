@@ -559,22 +559,26 @@ Pred_fig.text(0.12, 0.9, 'Revenue, bn rubles', fontsize=20, **font, color=f_colo
 # ---------------------------------------------------------------------------------------#
 
 #Assumptions
-tax_rate = 0.2
-wacc = 0.20 
-capex_coef = -0.08
-ebitda_coef = np.linspace(EBITDA_margin.iloc[-1] / 100, 20 / 100, 20) # Assume the EBITDA margin will grow from 15% to 20%
+tax_rate = np.linspace(14 / 100, 20 / 100, 20)    # Assume the tax rate will rise to 20%
+wacc = 0.2
+capex_coef = np.linspace(-8 / 100, -6 / 100, 20)    # Assume the CAPEX will decrease from 8% to %6
+ebit_margin = np.linspace(5 / 100, 10 / 100, 20)    # Assume the EBIT margin will grow from 5% to 10%
 NWC_coef = -0.01
 terminal_growth = 0.05
+da = np.linspace(-85 / 100, -100 / 100, 20)          # Assume the Amort as % of CAPEX will grow 
 
 #Projections
 projection = pd.DataFrame({'Dates':all_dates_q.iloc[-20:], 'Revenue':round(pd.to_numeric(future_revenue.iloc[-20:]), 2)})
-projection['EBITDA'] = round(projection['Revenue'] * ebitda_coef, 2)
-projection['Tax'] = round(projection['EBITDA'] * -tax_rate)
+projection['EBIT'] = round(projection['Revenue'] * ebit_margin, 2)
 projection['CAPEX'] = round(projection['Revenue'] * capex_coef, 2)
+projection['Amort'] = round(projection['CAPEX'] * da, 2)
+projection['Tax'] = round(projection['EBIT'] * -tax_rate, 2)
 projection['NWC'] = round(projection['Revenue'] * NWC_coef, 2)
-projection['FCF'] = round(projection.iloc[:,2:].sum(axis=1) ,2)
-projection['WACC'] = round(1 / (1+wacc/4)**pd.Series(range(1, len(projection)+1) , index=projection.index), 2)
+projection['FCF'] = round(projection.iloc[:,2:].sum(axis=1), 2)
+projection['WACC'] = round(1 / (1+wacc/4)**pd.Series(range(1, len(projection) + 1) , index=projection.index), 2)
 projection['DFCF'] = round(projection['FCF'] * projection['WACC'], 2)
+projection['EBITDA'] = round(projection['EBIT'] + projection['Amort'], 2)
+projection.reset_index(inplace=True, drop=True)
 
 final_fcf = projection['FCF'].iloc[-4:].sum()
 terminal_value = (final_fcf * (1 + terminal_growth)) / (wacc - terminal_growth)
@@ -602,6 +606,50 @@ potential_table = pd.DataFrame({
 potential_table['%'] = round((potential_table['Valuation'] - potential_table['Valuation'].iloc[0]) / potential_table['Valuation'].iloc[0] * 100)
 potential_table
 
+# Create a sensitivy table 
+WACC_range = [int(x * 100) if (x * 100).is_integer() else round(x * 100, 1)  for x in np.linspace(0.1, wacc, 7)]
+EBIT_marg_ranges = np.linspace(0.05, 0.15, 7)
+EBIT_margins = pd.DataFrame([np.linspace(0.05, b, 20) for b in EBIT_marg_ranges], index=EBIT_marg_ranges.round(3)).T.round(8)
+EBIT_labels = [int(b * 100) if (b * 100) % 1 < 0.05 else round(b * 100, 1) for b in EBIT_marg_ranges]
+
+
+sensitivity_WACC = pd.DataFrame(columns=[f"{e}%" for e in EBIT_labels], index=[f"{w}%" for w in WACC_range])
+for i, w in enumerate(WACC_range): 
+    for j , e in enumerate(EBIT_margins):
+        EBIT = round(projection['Revenue'] * EBIT_margins[e], 2) 
+        TAX = round(EBIT * -tax_rate, 2)
+        FCF = EBIT + TAX + projection['CAPEX'] + projection['NWC'] + projection['Amort'] 
+        WACC = round((1 / (1 + (w / 100) / 4)) ** pd.Series(range(1, len(projection) + 1), index=projection.index), 2) 
+        DCF_sum = (FCF * WACC).sum() 
+        Final_FCF = FCF.iloc[-4:].sum()
+        TV = (Final_FCF * (1 + terminal_growth)) / (w / 100 - terminal_growth) 
+        PV_TV = TV * WACC.iloc[-4:].mean()  
+        fair_price_n = (PV_TV + DCF_sum - net_debt) * 1_000_000_000 / shares               
+        sensitivity_WACC.iloc[i, j] = round((fair_price_n))
+    
+
+#Create a sensitivity map 
+sens_values = sensitivity_WACC.values.astype(int)
+
+Figure_sens_wacc, swf = plt.subplots(figsize=(9,6))
+swf = sns.heatmap(sens_values, xticklabels=sensitivity_WACC.columns, yticklabels=sensitivity_WACC.index, 
+                  center=fair_price, annot=True, fmt=".0f", cmap='Blues', 
+                  linewidths=0.5, ax=swf, cbar=False)
+swf.tick_params(axis='x', which='both', top=True, labeltop=True, labelbottom=False)
+swf.xaxis.set_ticks_position('top')
+swf.yaxis.set_tick_params(rotation=0)
+swf.xaxis.set_label_position('top')  # Move the label to the top
+swf.set_xlabel('EBIT margin', fontsize=16, labelpad=10)  
+swf.set_ylabel('WACC', fontsize=16)
+swf.axvline(3, color='red', alpha=0.6)
+swf.axvline(4, color='red', alpha=0.6)
+swf.axhline(6, color='red', alpha=0.6)
+swf.axhline(7, color='red', alpha=0.6)
+plt.show()
+print(potential_table, end='\n\n')
+print(f"LTM EBITDA 2025/2030  RUB {round(ozon_plq.iloc[-1, -4:].sum(), 1)} / RUB {round(projection['EBITDA'].iloc[-4:].sum(), 1)} bn")
+
+
 
 
 # Sensitivity analysis 
@@ -624,10 +672,12 @@ sng.yaxis.set_tick_params(rotation=0)
 sng.xaxis.set_label_position('top')  # Move the label to the top
 sng.set_xlabel('EBITDA', fontsize=16, labelpad=10)  
 sng.set_ylabel('Multiple', fontsize=16)
+sng.axvline(3, color='red', alpha=0.6)
+sng.axvline(4, color='red', alpha=0.6)
+sng.axhline(3, color='red', alpha=0.6)
+sng.axhline(4, color='red', alpha=0.6)
 plt.show()
 print(potential_table, end='\n\n')
 print(f"LTM EBITDA 2025/2030  RUB {round(ozon_plq.iloc[-1, -4:].sum(), 1)} / RUB {round(projection['EBITDA'].iloc[-4:].sum(), 1)} bn")
 
 
-
-    
