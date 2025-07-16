@@ -247,7 +247,7 @@ rvv.xaxis.set_tick_params(rotation=45, labelsize=9)
 rvv.xaxis.set_ticks_position('none')
 rvv.set_ylim(ozon_plq.iloc[1, -quarters_analysed:].min() * 0.8, ozon_plq.iloc[1, -quarters_analysed:].max() * 1.1)
 Revenue_figure.text(0.12, 0.86, 'Revenue', fontsize=16, color=f_colors[0], **font)
-Revenue_figure.text(0.12, 0.83, 'bn rubles', fontsize=16, color=f_colors[1], **font)
+Revenue_figure.text(0.12, 0.825, 'bn rubles', fontsize=16, color=f_colors[1], **font)
 rvv.margins(x=0.01)
 for i in range(len(dates_q)):
     rvv.text(dates_q.iloc[i], ozon_plq.iloc[1, -quarters_analysed + i] + ozon_plq.iloc[1, -quarters_analysed:].max() * 0.015,
@@ -282,7 +282,7 @@ ozon_colors = ['#D9D9D9', '#9DC3E6', '#FFE699', '#F4B183', '#E68688','#C4B2D6', 
 Revenue_str_figure, rsv = plt.subplots(figsize=(14, 6))
 for i in range(len(revenue_structure.iloc[1:, -quarters_analysed:])):
     rsv.bar(dates_q, revenue_structure.iloc[1 + i, -quarters_analysed:], color=ozon_colors[i],
-            bottom=revenue_structure.iloc[1:i + 1, -quarters_analysed:].sum(), label=labels[i], width=0.6) 
+            bottom=revenue_structure.iloc[1:i + 1, -quarters_analysed:].sum(), label=labels[i], width=0.55) 
 rsv.xaxis.set_tick_params(rotation=45, labelsize=10)
 rsv.margins(x=0.01)
 rsv.xaxis.set_ticks_position('none')
@@ -333,7 +333,7 @@ Expenses_figure, expv = plt.subplots(figsize=(9, 6))
 expv.set_title('Expenses Breakdown, bn rubles', fontsize=20, **font, color=f_colors[0], alpha=0.95)
 for i in range(len(exp_str)):
     expv.bar(dates_q, exp_str.iloc[i, -quarters_analysed:], color=ozon_colors_exp[i],
-             bottom=exp_str.iloc[:i, -quarters_analysed:].sum(), label=labels_exp[i], width=0.8)
+             bottom=exp_str.iloc[:i, -quarters_analysed:].sum(), label=labels_exp[i], width=0.7)
 expv.xaxis.set_tick_params(rotation=45, labelsize=9)
 expv.margins(x=0.01)
 expv.set_ylim(0, exp_str.iloc[:, -quarters_analysed:].sum().max() * 1.1)
@@ -341,18 +341,21 @@ expv.legend(loc='lower center', bbox_to_anchor=(0.5, -0.22), ncol=len(exp_str))
 for i in range(exp_str.shape[0]):
     for j in range(exp_str.shape[1]):
         if exp_str.iloc[i, j] > 6:
-            expv.text(dates_q.iloc[j], exp_str.iloc[:i, j].sum() + exp_str.iloc[i, j] * 0.4,
+            expv.text(dates_q.iloc[j], exp_str.iloc[:i, j].sum() + exp_str.iloc[i, j] * 0.35,
                       str(round(exp_str.iloc[i, -quarters_analysed + j], 1)), ha='center')
 for key, spine in expv.spines.items():
     if key != 'bottom':
         spine.set_visible(False)
 expv.yaxis.set_visible(False)
+plt.show()
+print(f"Total operating expenses RUB {round(-ozon_plq.iloc[6:11,-1].sum(), 1)} bn")
+print(f"Pct change {round(-ozon_plq.iloc[6:11,-5:].sum().pct_change(4).dropna().item()*100, 1)}% YoY")
 
 # Create an operating income graph 
 operating_maring = round((ozon_plq.iloc[11, -quarters_analysed:] / ozon_plq.iloc[1, -quarters_analysed:] * 100).astype(float), 1)
 
 Oper_inc_figure, (opv, opm) = plt.subplots(2, 1, figsize=(8, 6), height_ratios=(1.5, 1))
-bars = opv.bar(dates_q, ozon_plq.iloc[11, -quarters_analysed:], width=0.6, color=f_colors[2])
+bars = opv.bar(dates_q, ozon_plq.iloc[11, -quarters_analysed:], width=0.55, color=f_colors[2])
 for i in [-1, -5]:
     bars[i].set_color(colors[3])
 opv.xaxis.set_tick_params(rotation=45, labelsize=8)
@@ -455,7 +458,7 @@ for i in range(len(Net_Debt_Ebitda)):
 net_margin = round((ozon_plq.iloc[19, -quarters_analysed:] / ozon_plq.iloc[1, -quarters_analysed:] * 100).astype(float), 2)
 
 Profits_figure, (pfv, pfm) = plt.subplots(2,1, figsize=(9, 6), height_ratios=(1.5, 1))
-bars = pfv.bar(dates_q, ozon_plq.iloc[19, -quarters_analysed:], width=0.5, color=f_colors[2])
+bars = pfv.bar(dates_q, ozon_plq.iloc[19, -quarters_analysed:], width=0.45, color=f_colors[2])
 for i in [-1, -5]:
     bars[i].set_color(colors[3])
 pfv.xaxis.set_tick_params(rotation=45, labelsize=8)
@@ -484,7 +487,7 @@ for i in range(len(net_margin)):
 cf_labels = ['OCF', 'CAPEX', 'FCF']
 cash_flows = pd.DataFrame([ozon_cfq.iloc[20, -quarters_analysed:], ozon_cfq.iloc[42, -quarters_analysed:], (ozon_cfq.iloc[20, -quarters_analysed:] + ozon_cfq.iloc[42, -quarters_analysed:])], index=cf_labels)
 cf_colors = ['#8FCCEC', '#D9D9D9','#F1D078']
-cf_width = 0.25
+cf_width = 0.3
 
 CF_figure, cfv = plt.subplots(figsize=(10, 6))
 for i in range(cash_flows.shape[0]):
@@ -639,8 +642,8 @@ swf.tick_params(axis='x', which='both', top=True, labeltop=True, labelbottom=Fal
 swf.xaxis.set_ticks_position('top')
 swf.yaxis.set_tick_params(rotation=0)
 swf.xaxis.set_label_position('top')  # Move the label to the top
-swf.set_xlabel('EBIT margin', fontsize=16, labelpad=10)  
-swf.set_ylabel('WACC', fontsize=16)
+swf.set_xlabel('EBIT margin, %', fontsize=16, labelpad=10)  
+swf.set_ylabel('WACC, %', fontsize=16)
 swf.axvline(3, color='red', alpha=0.6)
 swf.axvline(4, color='red', alpha=0.6)
 swf.axhline(6, color='red', alpha=0.6)
